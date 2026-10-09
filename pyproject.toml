@@ -1,0 +1,25 @@
+[project]
+name = "mini-jiuwenswarm"
+version = "0.1.0"
+description = "A small Agent = Model + Harness swarm for learning JiuwenSwarm."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+mini-swarm = "mini_swarm.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mini_swarm"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

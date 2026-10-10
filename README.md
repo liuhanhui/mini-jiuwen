@@ -1,8 +1,8 @@
 # Mini JiuwenSwarm
 
-从零做的教学用迷你 Swarm：循环在 `engine/`，门铃以后再加。
+从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M1 循环**（CLI + `read_file` / `write_file` / `bash`）。
+当前进度：**M2 门铃与引擎分离**（`DeepAgent.send_input` / `attach_output` + HTTP `/chat`）。
 
 ## 安装
 
@@ -21,11 +21,16 @@ pytest
 
 ## 跑一问（脚本模型，不需要 API key）
 
-M1 只用脚本模型走通循环，不接真实 LLM：
-
 ```bash
 set MINI_SWARM_WORKSPACE=%CD%\workspace
 mini-swarm --demo
 ```
 
-工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。真实模型门铃在 M2。
+HTTP 门铃（关掉再开，同一 `session_id` 会读盘续上）：
+
+```bash
+mini-swarm --serve --demo --port 8765
+curl -N -H "Content-Type: application/json" -d "{\"session_id\":\"s1\",\"query\":\"What is the first line of README?\"}" http://127.0.0.1:8765/chat
+```
+
+工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。

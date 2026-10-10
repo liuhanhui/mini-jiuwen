@@ -22,3 +22,4 @@ def test_cli_without_demo_exits_with_help(capsys) -> None:
     captured = capsys.readouterr()
     assert code == 2
     assert "--demo" in captured.err
+    assert "--serve" in captured.err

@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | M0 宪法 | 完成 | 本文件 + 目录骨架 |
 | M1 循环 | 完成 | CLI `--demo` 能调 `read_file` 回答 README 第一行 |
-| M2 门铃与引擎分离 | 未开始 | HTTP 只 `send_input`，循环在 `DeepAgent` 对象里 |
+| M2 门铃与引擎分离 | 完成 | HTTP `/chat` 只 `send_input` / `attach_output`；同 session 可续 |
 | M3 两进程 + 信封 | 未开始 | Gateway 与 AgentServer 分进程，浏览器流式出字 |
 | M4 工作区与权限 | 未开始 | 指定目录才可写；`bash` 先问人 |
 | M5 声明式 Rail | 未开始 | YAML 增删工具，不改循环 |

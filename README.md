@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M2 门铃与引擎分离**（`DeepAgent.send_input` / `attach_output` + HTTP `/chat`）。
+当前进度：**M3 两进程 + 信封**（Gateway 对浏览器，AgentServer 对循环）。
 
 ## 安装
 
@@ -26,11 +26,18 @@ set MINI_SWARM_WORKSPACE=%CD%\workspace
 mini-swarm --demo
 ```
 
-HTTP 门铃（关掉再开，同一 `session_id` 会读盘续上）：
+M2 单进程 HTTP：
 
 ```bash
-mini-swarm --serve --demo --port 8765
-curl -N -H "Content-Type: application/json" -d "{\"session_id\":\"s1\",\"query\":\"What is the first line of README?\"}" http://127.0.0.1:8765/chat
+mini-swarm --serve --demo --port 18765
 ```
+
+M3 两进程（先 AgentServer:18765，再 Gateway:8764）：
+
+```bash
+mini-swarm --start --demo
+```
+
+浏览器打开 http://127.0.0.1:18765 。Gateway 把输入打成 `chat.send` 信封；AgentServer 日志会出现 `dispatched to runner`。杀掉 AgentServer 后，页面会收到明确的 `AgentServer unavailable`，而不是空转。
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。

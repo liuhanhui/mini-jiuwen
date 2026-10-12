@@ -8,9 +8,9 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from mini_swarm.doorbell.sessions import open_session
 from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.react import Event
-from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
 from mini_swarm.engine.tools import make_default_tools
 
@@ -18,12 +18,6 @@ from mini_swarm.engine.tools import make_default_tools
 class ChatRequest(BaseModel):
     session_id: str
     query: str
-
-
-def _open_session(session_id: str, store_dir: Path) -> Session:
-    if (store_dir / f"{session_id}.json").exists():
-        return Session.load(session_id, store_dir)
-    return Session(session_id=session_id, store_dir=store_dir)
 
 
 def _event_line(event: Event) -> str:
@@ -44,7 +38,7 @@ def create_app(*, workspace: Path, model: object) -> FastAPI:
         agent = DeepAgent(
             model=model,
             tools=tools,
-            session=_open_session(body.session_id, store_dir),
+            session=open_session(body.session_id, store_dir),
             stop=StopPolicy(max_steps=8),
         )
         agent.send_input(body.query)

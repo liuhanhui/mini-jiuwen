@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import sys
 
+from mini_swarm.doorbell.start import AGENTSERVER_PORT, start_processes
 from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.model import ModelTurn, ScriptedModel, ToolCall
 from mini_swarm.engine.session import Session
@@ -60,13 +61,25 @@ def _print_events(events) -> None:
             print(event.payload["text"])
 
 
+def _serve(app, host: str, port: int) -> None:
+    import uvicorn
+
+    uvicorn.run(app, host=host, port=port)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Mini JiuwenSwarm")
     parser.add_argument("query", nargs="?", default="What is the first line of README?")
     parser.add_argument("--demo", action="store_true", help="Use the scripted read_file model")
-    parser.add_argument("--serve", action="store_true", help="Start the HTTP doorbell (M2)")
+    parser.add_argument("--serve", action="store_true", help="Start the M2 HTTP doorbell")
+    parser.add_argument("--start", action="store_true", help="Start Gateway + AgentServer (M3)")
+    parser.add_argument("--role", choices=["agentserver", "gateway"], help="Run one M3 process")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=None)
+    parser.add_argument(
+        "--agentserver-url",
+        default=f"ws://127.0.0.1:{AGENTSERVER_PORT}/e2a",
+    )
     parser.add_argument("--session", default="default")
     args = parser.parse_args(argv)
     _configure_stdio()
@@ -74,19 +87,44 @@ def main(argv: list[str] | None = None) -> int:
     if not args.demo:
         print(
             "Pass --demo to use the scripted model "
-            "(or --serve --demo for the HTTP doorbell).",
+            "(or --serve --demo / --start --demo).",
             file=sys.stderr,
         )
         return 2
 
     workspace = resolve_workspace()
-    if args.serve:
-        import uvicorn
+    if args.start:
+        return start_processes(demo=True, host=args.host)
 
+    if args.role == "agentserver":
+        from mini_swarm.doorbell.agentserver import create_agentserver_app
+
+        _serve(
+            create_agentserver_app(workspace=workspace, model=build_demo_model(workspace)),
+            args.host,
+            args.port or AGENTSERVER_PORT,
+        )
+        return 0
+
+    if args.role == "gateway":
+        from mini_swarm.doorbell.gateway import create_gateway_app
+        from mini_swarm.doorbell.start import GATEWAY_PORT
+
+        _serve(
+            create_gateway_app(agentserver_url=args.agentserver_url),
+            args.host,
+            args.port or GATEWAY_PORT,
+        )
+        return 0
+
+    if args.serve:
         from mini_swarm.doorbell.http import create_app
 
-        app = create_app(workspace=workspace, model=build_demo_model(workspace))
-        uvicorn.run(app, host=args.host, port=args.port)
+        _serve(
+            create_app(workspace=workspace, model=build_demo_model(workspace)),
+            args.host,
+            args.port or 8765,
+        )
         return 0
 
     agent = build_demo_agent(workspace, args.session)

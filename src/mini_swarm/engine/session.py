@@ -9,6 +9,7 @@ class Session:
         self.session_id = session_id
         self.store_dir = Path(store_dir)
         self.messages: list[dict] = []
+        self.pending_calls: list[dict] | None = None
 
     def add_user(self, content: str) -> None:
         self.messages.append({"role": "user", "content": content})
@@ -28,7 +29,14 @@ class Session:
         self.store_dir.mkdir(parents=True, exist_ok=True)
         path = self.store_dir / f"{self.session_id}.json"
         path.write_text(
-            json.dumps({"messages": self.messages}, ensure_ascii=False, indent=2),
+            json.dumps(
+                {
+                    "messages": self.messages,
+                    "pending_calls": self.pending_calls,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
             encoding="utf-8",
         )
 
@@ -38,4 +46,6 @@ class Session:
         data = json.loads(path.read_text(encoding="utf-8"))
         session = cls(session_id=session_id, store_dir=store_dir)
         session.messages = list(data.get("messages") or [])
+        pending = data.get("pending_calls") or None
+        session.pending_calls = list(pending) if pending else None
         return session

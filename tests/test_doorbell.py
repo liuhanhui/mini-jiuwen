@@ -4,7 +4,12 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from mini_swarm.doorbell.http import create_app
-from mini_swarm.engine.model import ModelTurn, ScriptedModel
+from mini_swarm.engine.model import ModelTurn, ScriptedModel, ToolCall
+
+WRITE_CMD = (
+    "python -c \"from pathlib import Path; "
+    "Path('pwned.txt').write_text('boom', encoding='utf-8')\""
+)
 
 
 def _lines(response) -> list[dict]:
@@ -45,6 +50,31 @@ def test_chat_survives_app_restart_with_same_session(tmp_path: Path) -> None:
     saved = json.loads((tmp_path / "sessions" / "s1.json").read_text(encoding="utf-8"))
     contents = [msg["content"] for msg in saved["messages"]]
     assert contents == ["hi", "hello", "next", "again"]
+
+
+def test_http_chat_pauses_bash_until_decision(tmp_path: Path) -> None:
+    model = ScriptedModel(
+        [
+            ModelTurn(
+                tool_calls=[
+                    ToolCall(id="b1", name="bash", args={"command": WRITE_CMD})
+                ]
+            ),
+            ModelTurn(text="done"),
+        ]
+    )
+    first = TestClient(create_app(workspace=tmp_path, model=model)).post(
+        "/chat", json={"session_id": "s1", "query": "run it"}
+    )
+    kinds = [item["kind"] for item in _lines(first)]
+    assert "permission.ask" in kinds
+    assert not (tmp_path / "pwned.txt").exists()
+
+    second = TestClient(create_app(workspace=tmp_path, model=model)).post(
+        "/chat", json={"session_id": "s1", "decision": "allow"}
+    )
+    assert (tmp_path / "pwned.txt").exists()
+    assert any(item["kind"] == "text.delta" for item in _lines(second))
 
 
 def test_http_doorbell_only_wakes_deep_agent() -> None:

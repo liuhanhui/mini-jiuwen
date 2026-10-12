@@ -17,7 +17,8 @@ from mini_swarm.engine.tools import make_default_tools
 
 class ChatRequest(BaseModel):
     session_id: str
-    query: str
+    query: str = ""
+    decision: str | None = None
 
 
 def _event_line(event: Event) -> str:
@@ -41,7 +42,10 @@ def create_app(*, workspace: Path, model: object) -> FastAPI:
             session=open_session(body.session_id, store_dir),
             stop=StopPolicy(max_steps=8),
         )
-        agent.send_input(body.query)
+        if body.decision:
+            agent.send_input(decision=body.decision)
+        else:
+            agent.send_input(body.query)
 
         async def stream() -> AsyncIterator[str]:
             async for event in agent.attach_output():

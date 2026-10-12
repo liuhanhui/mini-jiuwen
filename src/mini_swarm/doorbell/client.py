@@ -23,6 +23,7 @@ class WsAgentClient:
                         session_id=envelope.session_id,
                         request_id=envelope.request_id,
                         query=envelope.query,
+                        decision=envelope.decision,
                     )
                 )
                 async for raw in ws:

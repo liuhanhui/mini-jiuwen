@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M3 两进程 + 信封**（Gateway 对浏览器，AgentServer 对循环）。
+当前进度：**M4 工作区与权限**（`bash` 执行前先问人；拒绝则循环观察到「用户拒绝」）。
 
 ## 安装
 
@@ -38,6 +38,8 @@ M3 两进程（先 AgentServer:18765，再 Gateway:8764）：
 mini-swarm --start --demo
 ```
 
-浏览器打开 http://127.0.0.1:18765 。Gateway 把输入打成 `chat.send` 信封；AgentServer 日志会出现 `dispatched to runner`。杀掉 AgentServer 后，页面会收到明确的 `AgentServer unavailable`，而不是空转。
+浏览器打开 http://127.0.0.1:8764 。Gateway 把输入打成 `chat.send` 信封；AgentServer 日志会出现 `dispatched to runner`。杀掉 AgentServer 后，页面会收到明确的 `AgentServer unavailable`，而不是空转。
 
-工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。
+`bash` 会先弹出 **允许 / 拒绝**。不点允许，命令不会执行。
+
+工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

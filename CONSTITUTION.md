@@ -19,7 +19,7 @@
 | M1 循环 | 完成 | CLI `--demo` 能调 `read_file` 回答 README 第一行 |
 | M2 门铃与引擎分离 | 完成 | HTTP `/chat` 只 `send_input` / `attach_output`；同 session 可续 |
 | M3 两进程 + 信封 | 完成 | `mini-swarm --start --demo`：Gateway:8764 + AgentServer:18765，信封 `chat.send` |
-| M4 工作区与权限 | 未开始 | 指定目录才可写；`bash` 先问人 |
+| M4 工作区与权限 | 完成 | 工具不出 workspace；`bash` 先 `permission.ask`，拒绝则观察「用户拒绝」 |
 | M5 声明式 Rail | 未开始 | YAML 增删工具，不改循环 |
 | M6 子代理 | 未开始 | `task` 派出隔离上下文 |
 | M7 Leader / Teammate | 未开始 | 同进程两个 Agent 对象 |

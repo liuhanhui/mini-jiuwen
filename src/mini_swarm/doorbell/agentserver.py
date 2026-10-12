@@ -51,7 +51,10 @@ def create_agentserver_app(*, workspace: Path, model: object) -> FastAPI:
                 session=open_session(envelope.session_id, store_dir),
                 stop=StopPolicy(max_steps=8),
             )
-            agent.send_input(envelope.query)
+            if envelope.decision:
+                agent.send_input(decision=envelope.decision)
+            else:
+                agent.send_input(envelope.query)
             async for event in agent.attach_output():
                 if event.kind == "turn.complete":
                     continue

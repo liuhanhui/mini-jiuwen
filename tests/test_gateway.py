@@ -75,6 +75,25 @@ def test_gateway_serves_the_chat_page() -> None:
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "/ws" in response.text
+    assert "允许" in response.text
+    assert "拒绝" in response.text
+
+
+def test_gateway_forwards_permission_decision() -> None:
+    client = _FakeAgentClient(
+        [
+            {"type": "complete", "request_id": "ignored"},
+        ]
+    )
+    app = create_gateway_app(
+        agentserver_url="ws://127.0.0.1:1/e2a",
+        agent_client=client,
+    )
+    with TestClient(app).websocket_connect("/ws") as ws:
+        ws.send_json({"session_id": "s1", "decision": "deny"})
+        ws.receive_json()
+    assert client.sent[0].decision == "deny"
+    assert client.sent[0].method == "chat.send"
 
 
 def test_start_commands_launch_agentserver_then_gateway() -> None:

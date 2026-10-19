@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M5 声明式 Rail**（`rail.yaml` 增删工具，不改 `react.py` 循环）。
+当前进度：**M6 子代理**（`task` 派出隔离 session 的子 Agent；循环仍只在 `react.py`）。
 
 ## 安装
 
@@ -48,6 +48,8 @@ mini-swarm --start --demo
 mini-swarm --demo --rail rail.yaml
 ```
 
-把 `bash` 那一行删掉后，Agent 不再暴露该工具。未指定 `--rail` 时，若工作区有 `rail.yaml` 则用它，否则三个内置工具全开。
+把 `bash` 那一行删掉后，Agent 不再暴露该工具。未指定 `--rail` 时，若工作区有 `rail.yaml` 则用它，否则内置工具全开。
+
+`task` 会再开一个 `ReactAgent`，使用空的子 session（`sessions/task-*.json`），子代理没有 `task` 工具，避免套娃。
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

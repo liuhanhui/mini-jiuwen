@@ -3,3 +3,4 @@ tools:
   - read_file
   - write_file
   - bash
+  - task

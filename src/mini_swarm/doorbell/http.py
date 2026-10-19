@@ -12,7 +12,7 @@ from mini_swarm.doorbell.sessions import open_session
 from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.react import Event
 from mini_swarm.engine.stop import StopPolicy
-from mini_swarm.rail import make_rail_tools
+from mini_swarm.rail import make_harness_tools
 
 
 class ChatRequest(BaseModel):
@@ -36,7 +36,10 @@ def create_app(
 ) -> FastAPI:
     workspace = Path(workspace)
     store_dir = workspace / "sessions"
-    tools = make_rail_tools(workspace, rail_path)
+    stop = StopPolicy(max_steps=8)
+    tools = make_harness_tools(
+        workspace, rail_path, model=model, stop=stop, store_dir=store_dir
+    )
     app = FastAPI(title="Mini JiuwenSwarm doorbell")
 
     @app.post("/chat")
@@ -45,7 +48,7 @@ def create_app(
             model=model,
             tools=tools,
             session=open_session(body.session_id, store_dir),
-            stop=StopPolicy(max_steps=8),
+            stop=stop,
         )
         if body.decision:
             agent.send_input(decision=body.decision)

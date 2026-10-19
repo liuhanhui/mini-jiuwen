@@ -1,0 +1,5 @@
+# M5 Rail: list builtin tools to expose. Add or remove names; do not edit the loop.
+tools:
+  - read_file
+  - write_file
+  - bash

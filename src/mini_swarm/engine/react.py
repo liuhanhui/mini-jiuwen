@@ -8,7 +8,6 @@ from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
 from mini_swarm.engine.tools import ToolError, ToolRegistry
 
-PERMISSION_TOOLS = {"bash"}
 DENIED_OBSERVATION = "用户拒绝"
 
 
@@ -119,7 +118,7 @@ class ReactAgent:
     def _drain_calls(self, remaining: list[ToolCall], events: list[Event]) -> bool:
         while remaining:
             call = remaining[0]
-            if call.name in PERMISSION_TOOLS:
+            if self.tools.requires_permission(call.name):
                 self.session.pending_calls = [_call_to_dict(item) for item in remaining]
                 events.append(
                     Event(

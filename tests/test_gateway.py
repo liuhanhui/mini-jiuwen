@@ -96,6 +96,13 @@ def test_gateway_forwards_permission_decision() -> None:
     assert client.sent[0].method == "chat.send"
 
 
+def test_start_commands_forward_rail_to_agentserver() -> None:
+    commands = build_start_commands(demo=True, rail="rail.yaml")
+    agentserver, gateway = commands
+    assert agentserver[agentserver.index("--rail") + 1] == "rail.yaml"
+    assert "--rail" not in gateway
+
+
 def test_start_commands_launch_agentserver_then_gateway() -> None:
     commands = build_start_commands(demo=True)
     assert AGENTSERVER_PORT == 18765

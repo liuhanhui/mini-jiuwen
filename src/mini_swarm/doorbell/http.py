@@ -12,7 +12,7 @@ from mini_swarm.doorbell.sessions import open_session
 from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.react import Event
 from mini_swarm.engine.stop import StopPolicy
-from mini_swarm.engine.tools import make_default_tools
+from mini_swarm.rail import make_rail_tools
 
 
 class ChatRequest(BaseModel):
@@ -28,10 +28,15 @@ def _event_line(event: Event) -> str:
     ) + "\n"
 
 
-def create_app(*, workspace: Path, model: object) -> FastAPI:
+def create_app(
+    *,
+    workspace: Path,
+    model: object,
+    rail_path: str | Path | None = None,
+) -> FastAPI:
     workspace = Path(workspace)
     store_dir = workspace / "sessions"
-    tools = make_default_tools(workspace)
+    tools = make_rail_tools(workspace, rail_path)
     app = FastAPI(title="Mini JiuwenSwarm doorbell")
 
     @app.post("/chat")

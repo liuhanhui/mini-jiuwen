@@ -16,33 +16,58 @@ class ToolResult:
     output: str
 
 
+BUILTIN_TOOL_NAMES = ("read_file", "write_file", "bash")
+PERMISSION_TOOLS = {"bash"}
+
+_SCHEMAS: dict[str, dict[str, Any]] = {
+    "read_file": {
+        "name": "read_file",
+        "description": "Read a UTF-8 text file inside the workspace.",
+        "parameters": {"path": "relative path"},
+    },
+    "write_file": {
+        "name": "write_file",
+        "description": "Write a UTF-8 text file inside the workspace.",
+        "parameters": {"path": "relative path", "content": "file contents"},
+    },
+    "bash": {
+        "name": "bash",
+        "description": "Run a shell command with the workspace as cwd.",
+        "parameters": {"command": "shell command"},
+    },
+}
+
+
 class ToolRegistry:
-    def __init__(self, workspace: Path) -> None:
+    def __init__(
+        self,
+        workspace: Path,
+        enabled: list[str] | None = None,
+    ) -> None:
         self.workspace = Path(workspace).resolve()
-        self._handlers: dict[str, Callable[[dict[str, Any]], ToolResult]] = {
+        catalog: dict[str, Callable[[dict[str, Any]], ToolResult]] = {
             "read_file": self._read_file,
             "write_file": self._write_file,
             "bash": self._bash,
         }
+        names = list(BUILTIN_TOOL_NAMES) if enabled is None else list(enabled)
+        self._handlers: dict[str, Callable[[dict[str, Any]], ToolResult]] = {}
+        self._schema_list: list[dict[str, Any]] = []
+        self._permission = set()
+        for name in names:
+            handler = catalog.get(name)
+            if handler is None:
+                raise ToolError(f"unknown tool: {name}")
+            self._handlers[name] = handler
+            self._schema_list.append(_SCHEMAS[name])
+            if name in PERMISSION_TOOLS:
+                self._permission.add(name)
 
     def schemas(self) -> list[dict[str, Any]]:
-        return [
-            {
-                "name": "read_file",
-                "description": "Read a UTF-8 text file inside the workspace.",
-                "parameters": {"path": "relative path"},
-            },
-            {
-                "name": "write_file",
-                "description": "Write a UTF-8 text file inside the workspace.",
-                "parameters": {"path": "relative path", "content": "file contents"},
-            },
-            {
-                "name": "bash",
-                "description": "Run a shell command with the workspace as cwd.",
-                "parameters": {"command": "shell command"},
-            },
-        ]
+        return list(self._schema_list)
+
+    def requires_permission(self, name: str) -> bool:
+        return name in self._permission
 
     def call(self, name: str, args: dict[str, Any]) -> ToolResult:
         handler = self._handlers.get(name)

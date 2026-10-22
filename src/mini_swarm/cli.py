@@ -9,7 +9,7 @@ from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.model import ModelTurn, ScriptedModel, ToolCall
 from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
-from mini_swarm.rail import make_rail_tools
+from mini_swarm.rail import make_harness_tools
 from mini_swarm.workspace import resolve_workspace
 
 
@@ -38,11 +38,16 @@ def build_demo_model(workspace) -> ScriptedModel:
 
 
 def build_demo_agent(workspace, session_id: str, rail=None) -> DeepAgent:
+    store_dir = workspace / "sessions"
+    model = build_demo_model(workspace)
+    stop = StopPolicy(max_steps=8)
     return DeepAgent(
-        model=build_demo_model(workspace),
-        tools=make_rail_tools(workspace, rail),
-        session=Session(session_id=session_id, store_dir=workspace / "sessions"),
-        stop=StopPolicy(max_steps=8),
+        model=model,
+        tools=make_harness_tools(
+            workspace, rail, model=model, stop=stop, store_dir=store_dir
+        ),
+        session=Session(session_id=session_id, store_dir=store_dir),
+        stop=stop,
     )
 
 

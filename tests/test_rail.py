@@ -50,7 +50,7 @@ def test_workspace_rail_yaml_is_used_when_path_omitted(tmp_path: Path) -> None:
 def test_missing_rail_keeps_all_builtins(tmp_path: Path) -> None:
     tools = make_rail_tools(tmp_path)
     names = {schema["name"] for schema in tools.schemas()}
-    assert names == {"read_file", "write_file", "bash"}
+    assert names == {"read_file", "write_file", "bash", "task"}
 
 
 def test_unknown_rail_tool_is_an_error(tmp_path: Path) -> None:

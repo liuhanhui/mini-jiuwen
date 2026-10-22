@@ -16,7 +16,7 @@ class ToolResult:
     output: str
 
 
-BUILTIN_TOOL_NAMES = ("read_file", "write_file", "bash")
+BUILTIN_TOOL_NAMES = ("read_file", "write_file", "bash", "task")
 PERMISSION_TOOLS = {"bash"}
 
 _SCHEMAS: dict[str, dict[str, Any]] = {
@@ -35,6 +35,11 @@ _SCHEMAS: dict[str, dict[str, Any]] = {
         "description": "Run a shell command with the workspace as cwd.",
         "parameters": {"command": "shell command"},
     },
+    "task": {
+        "name": "task",
+        "description": "Spawn a sub-agent with an isolated session.",
+        "parameters": {"prompt": "task for the sub-agent"},
+    },
 }
 
 
@@ -49,6 +54,7 @@ class ToolRegistry:
             "read_file": self._read_file,
             "write_file": self._write_file,
             "bash": self._bash,
+            "task": self._task_stub,
         }
         names = list(BUILTIN_TOOL_NAMES) if enabled is None else list(enabled)
         self._handlers: dict[str, Callable[[dict[str, Any]], ToolResult]] = {}
@@ -62,6 +68,16 @@ class ToolRegistry:
             self._schema_list.append(_SCHEMAS[name])
             if name in PERMISSION_TOOLS:
                 self._permission.add(name)
+
+    def names(self) -> list[str]:
+        return list(self._handlers)
+
+    def replace_handler(
+        self, name: str, handler: Callable[[dict[str, Any]], ToolResult]
+    ) -> None:
+        if name not in self._handlers:
+            raise ToolError(f"unknown tool: {name}")
+        self._handlers[name] = handler
 
     def schemas(self) -> list[dict[str, Any]]:
         return list(self._schema_list)
@@ -112,6 +128,10 @@ class ToolRegistry:
         if completed.returncode != 0:
             return ToolResult(ok=False, output=output or f"exit {completed.returncode}")
         return ToolResult(ok=True, output=output)
+
+    def _task_stub(self, args: dict[str, Any]) -> ToolResult:
+        del args
+        return ToolResult(ok=False, output="task tool is not wired")
 
 
 def make_default_tools(workspace: Path) -> ToolRegistry:

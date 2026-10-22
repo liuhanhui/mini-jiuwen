@@ -56,3 +56,24 @@ def make_rail_tools(
         return ToolRegistry(workspace)
     enabled = load_enabled_tools(path)
     return ToolRegistry(workspace, enabled=enabled)
+
+
+def make_harness_tools(
+    workspace: Path,
+    rail_path: str | Path | None = None,
+    *,
+    model: object,
+    stop=None,
+    store_dir: Path | None = None,
+) -> ToolRegistry:
+    from mini_swarm.engine.task import install_task_tool
+
+    workspace = Path(workspace)
+    tools = make_rail_tools(workspace, rail_path)
+    install_task_tool(
+        tools,
+        model=model,
+        stop=stop,
+        store_dir=Path(store_dir) if store_dir else workspace / "sessions",
+    )
+    return tools

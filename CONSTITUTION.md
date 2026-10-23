@@ -22,7 +22,7 @@
 | M4 工作区与权限 | 完成 | 工具不出 workspace；`bash` 先 `permission.ask`，拒绝则观察「用户拒绝」 |
 | M5 声明式 Rail | 完成 | `rail.yaml` 增删工具；循环仍只在 `react.py` |
 | M6 子代理 | 完成 | `task` 派出隔离 session 的子 `ReactAgent` |
-| M7 Leader / Teammate | 未开始 | 同进程两个 Agent 对象 |
+| M7 Leader / Teammate | 完成 | 同进程 `Team(leader, teammate)`，`ask_teammate` 复用队友 session |
 
 ## 禁止
 

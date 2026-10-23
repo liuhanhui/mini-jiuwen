@@ -8,11 +8,9 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from mini_swarm.doorbell.sessions import open_session
-from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.react import Event
 from mini_swarm.engine.stop import StopPolicy
-from mini_swarm.rail import make_harness_tools
+from mini_swarm.engine.team import make_team
 
 
 class ChatRequest(BaseModel):
@@ -37,26 +35,25 @@ def create_app(
     workspace = Path(workspace)
     store_dir = workspace / "sessions"
     stop = StopPolicy(max_steps=8)
-    tools = make_harness_tools(
-        workspace, rail_path, model=model, stop=stop, store_dir=store_dir
-    )
     app = FastAPI(title="Mini JiuwenSwarm doorbell")
 
     @app.post("/chat")
     async def chat(body: ChatRequest) -> StreamingResponse:
-        agent = DeepAgent(
+        team = make_team(
+            workspace=workspace,
             model=model,
-            tools=tools,
-            session=open_session(body.session_id, store_dir),
+            session_id=body.session_id,
             stop=stop,
+            rail_path=rail_path,
+            store_dir=store_dir,
         )
         if body.decision:
-            agent.send_input(decision=body.decision)
+            team.send_input(decision=body.decision)
         else:
-            agent.send_input(body.query)
+            team.send_input(body.query)
 
         async def stream() -> AsyncIterator[str]:
-            async for event in agent.attach_output():
+            async for event in team.attach_output():
                 yield _event_line(event)
 
         return StreamingResponse(stream(), media_type="application/x-ndjson")

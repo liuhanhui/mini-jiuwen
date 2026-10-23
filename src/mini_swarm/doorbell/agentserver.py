@@ -13,10 +13,8 @@ from mini_swarm.doorbell.envelope import (
     encode_error,
     peek_request_id,
 )
-from mini_swarm.doorbell.sessions import open_session
-from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.stop import StopPolicy
-from mini_swarm.rail import make_harness_tools
+from mini_swarm.engine.team import make_team
 
 logger = logging.getLogger("mini_swarm.agentserver")
 
@@ -30,9 +28,6 @@ def create_agentserver_app(
     workspace = Path(workspace)
     store_dir = workspace / "sessions"
     stop = StopPolicy(max_steps=8)
-    tools = make_harness_tools(
-        workspace, rail_path, model=model, stop=stop, store_dir=store_dir
-    )
     app = FastAPI(title="Mini JiuwenSwarm AgentServer")
 
     @app.websocket("/e2a")
@@ -53,17 +48,19 @@ def create_agentserver_app(
                 envelope.session_id,
                 envelope.request_id,
             )
-            agent = DeepAgent(
+            team = make_team(
+                workspace=workspace,
                 model=model,
-                tools=tools,
-                session=open_session(envelope.session_id, store_dir),
+                session_id=envelope.session_id,
                 stop=stop,
+                rail_path=rail_path,
+                store_dir=store_dir,
             )
             if envelope.decision:
-                agent.send_input(decision=envelope.decision)
+                team.send_input(decision=envelope.decision)
             else:
-                agent.send_input(envelope.query)
-            async for event in agent.attach_output():
+                team.send_input(envelope.query)
+            async for event in team.attach_output():
                 if event.kind == "turn.complete":
                     continue
                 await ws.send_text(

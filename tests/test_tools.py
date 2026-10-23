@@ -68,4 +68,4 @@ def test_unknown_tool_is_an_error(tmp_path: Path) -> None:
 def test_tool_schemas_list_the_builtins(tmp_path: Path) -> None:
     tools = make_default_tools(tmp_path)
     names = {schema["name"] for schema in tools.schemas()}
-    assert names == {"read_file", "write_file", "bash", "task"}
+    assert names == {"read_file", "write_file", "bash", "task", "ask_teammate"}

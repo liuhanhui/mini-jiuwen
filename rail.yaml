@@ -4,3 +4,4 @@ tools:
   - write_file
   - bash
   - task
+  - ask_teammate

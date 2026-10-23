@@ -16,7 +16,7 @@ class ToolResult:
     output: str
 
 
-BUILTIN_TOOL_NAMES = ("read_file", "write_file", "bash", "task")
+BUILTIN_TOOL_NAMES = ("read_file", "write_file", "bash", "task", "ask_teammate")
 PERMISSION_TOOLS = {"bash"}
 
 _SCHEMAS: dict[str, dict[str, Any]] = {
@@ -40,6 +40,11 @@ _SCHEMAS: dict[str, dict[str, Any]] = {
         "description": "Spawn a sub-agent with an isolated session.",
         "parameters": {"prompt": "task for the sub-agent"},
     },
+    "ask_teammate": {
+        "name": "ask_teammate",
+        "description": "Ask the standing teammate Agent in this process.",
+        "parameters": {"prompt": "message for the teammate"},
+    },
 }
 
 
@@ -55,6 +60,7 @@ class ToolRegistry:
             "write_file": self._write_file,
             "bash": self._bash,
             "task": self._task_stub,
+            "ask_teammate": self._ask_teammate_stub,
         }
         names = list(BUILTIN_TOOL_NAMES) if enabled is None else list(enabled)
         self._handlers: dict[str, Callable[[dict[str, Any]], ToolResult]] = {}
@@ -132,6 +138,10 @@ class ToolRegistry:
     def _task_stub(self, args: dict[str, Any]) -> ToolResult:
         del args
         return ToolResult(ok=False, output="task tool is not wired")
+
+    def _ask_teammate_stub(self, args: dict[str, Any]) -> ToolResult:
+        del args
+        return ToolResult(ok=False, output="teammate is not wired")
 
 
 def make_default_tools(workspace: Path) -> ToolRegistry:

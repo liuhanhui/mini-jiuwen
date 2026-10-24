@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M8 真实模型**（OpenAI 兼容接口；循环仍只调 `Model.complete`）。
+当前进度：**M9 工作区记忆**（`AGENTS.md` / `MEMORY.md` 由 Harness 注入；循环仍只调 `Model.complete`）。
 
 ## 安装
 
@@ -56,12 +56,21 @@ mini-swarm --demo --rail rail.yaml
 
 真实模型（OpenAI 兼容，不需要 `--demo`）：
 
-```bash
-set MINI_SWARM_API_KEY=sk-...
-set MINI_SWARM_BASE_URL=https://api.openai.com/v1
-set MINI_SWARM_MODEL=gpt-4o-mini
+```powershell
+$env:MINI_SWARM_API_KEY="sk-..."
+$env:MINI_SWARM_BASE_URL="https://api.deepseek.com"
+$env:MINI_SWARM_MODEL="deepseek-chat"
 mini-swarm "What is the first line of README?"
 mini-swarm --start
 ```
+
+工作区可以放两份记忆文件。Harness 每次调用模型前现读现拼，不写进 session：
+
+```text
+workspace/AGENTS.md   长期说明书（怎么做事）
+workspace/MEMORY.md   可改的笔记（模型可用 write_file 更新）
+```
+
+同一轮里写入 `MEMORY.md` 后，下一步 `complete` 就能看到新内容。Leader、Teammate、`task` 子代理共用工作区，因此共用记忆。
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

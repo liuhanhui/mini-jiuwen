@@ -24,6 +24,7 @@
 | M6 子代理 | 完成 | `task` 派出隔离 session 的子 `ReactAgent` |
 | M7 Leader / Teammate | 完成 | 同进程 `Team(leader, teammate)`，`ask_teammate` 复用队友 session |
 | M8 真实模型 | 完成 | `OpenAICompatModel.complete`；无 `--demo` 时读 `MINI_SWARM_API_KEY` |
+| M9 工作区记忆 | 完成 | `AGENTS.md` / `MEMORY.md` 每次 `complete` 前由 Harness 注入；不写入 session |
 
 ## 禁止
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from mini_swarm.engine.memory import messages_with_memory
 from mini_swarm.engine.model import ModelTurn, ToolCall
 from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
@@ -87,7 +88,10 @@ class ReactAgent:
         stopped_by = "max_steps"
 
         while not self.stop.should_stop(step=step, has_final_text=False):
-            turn = self.model.complete(self.session.messages, self.tools.schemas())
+            turn = self.model.complete(
+                messages_with_memory(self.tools.workspace, self.session.messages),
+                self.tools.schemas(),
+            )
             step += 1
 
             if turn.tool_calls:

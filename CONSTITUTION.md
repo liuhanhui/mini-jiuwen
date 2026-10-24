@@ -26,6 +26,7 @@
 | M8 真实模型 | 完成 | `OpenAICompatModel.complete`；无 `--demo` 时读 `MINI_SWARM_API_KEY` |
 | M9 工作区记忆 | 完成 | `AGENTS.md` / `MEMORY.md` 每次 `complete` 前由 Harness 注入；不写入 session |
 | M10 按需 Skills | 完成 | `skills/*/SKILL.md` 只注入目录；全文靠 `read_file`；循环仍只在 `react.py` |
+| M11 上下文压缩 | 完成 | session 超长时 Harness 折叠旧消息；不在循环外调模型 |
 
 ## 禁止
 

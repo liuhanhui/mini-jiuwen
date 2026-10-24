@@ -23,6 +23,7 @@
 | M5 声明式 Rail | 完成 | `rail.yaml` 增删工具；循环仍只在 `react.py` |
 | M6 子代理 | 完成 | `task` 派出隔离 session 的子 `ReactAgent` |
 | M7 Leader / Teammate | 完成 | 同进程 `Team(leader, teammate)`，`ask_teammate` 复用队友 session |
+| M8 真实模型 | 完成 | `OpenAICompatModel.complete`；无 `--demo` 时读 `MINI_SWARM_API_KEY` |
 
 ## 禁止
 

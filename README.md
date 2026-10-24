@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M7 Leader / Teammate**（同进程两个 Agent 对象；Leader 用 `ask_teammate` 问队友）。
+当前进度：**M8 真实模型**（OpenAI 兼容接口；循环仍只调 `Model.complete`）。
 
 ## 安装
 
@@ -53,5 +53,15 @@ mini-swarm --demo --rail rail.yaml
 `task` 会再开一个 `ReactAgent`，使用空的子 session（`sessions/task-*.json`），子代理没有 `task` 工具，避免套娃。
 
 `ask_teammate` 问的是同进程里常驻的 Teammate（`sessions/<id>-teammate.json`），多次提问会续上同一段对话，不是每次新建子代理。
+
+真实模型（OpenAI 兼容，不需要 `--demo`）：
+
+```bash
+set MINI_SWARM_API_KEY=sk-...
+set MINI_SWARM_BASE_URL=https://api.openai.com/v1
+set MINI_SWARM_MODEL=gpt-4o-mini
+mini-swarm "What is the first line of README?"
+mini-swarm --start
+```
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

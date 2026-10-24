@@ -5,7 +5,7 @@ import os
 import urllib.error
 import urllib.request
 
-from mini_swarm.engine.model import ModelTurn, ToolCall
+from mini_swarm.engine.model import ModelTurn, Token, ToolCall
 
 
 class LlmError(Exception):
@@ -91,7 +91,7 @@ class OpenAICompatModel:
             model=os.environ.get("MINI_SWARM_MODEL", "gpt-4o-mini"),
         )
 
-    def complete(self, messages: list[dict], tools: list[dict]) -> ModelTurn:
+    def _payload(self, messages: list[dict], tools: list[dict], *, stream: bool = False) -> dict:
         payload: dict = {
             "model": self.model,
             "messages": to_openai_messages(messages),
@@ -99,7 +99,12 @@ class OpenAICompatModel:
         openai_tools = to_openai_tools(tools)
         if openai_tools:
             payload["tools"] = openai_tools
-        data = self._post(payload)
+        if stream:
+            payload["stream"] = True
+        return payload
+
+    def complete(self, messages: list[dict], tools: list[dict]) -> ModelTurn:
+        data = self._post(self._payload(messages, tools))
         try:
             message = data["choices"][0]["message"]
         except (KeyError, IndexError, TypeError) as exc:
@@ -124,6 +129,79 @@ class OpenAICompatModel:
                 )
             return ModelTurn(tool_calls=calls)
         return ModelTurn(text=str(message.get("content") or ""))
+
+    def stream(self, messages: list[dict], tools: list[dict]):
+        chunks: list[str] = []
+        calls: dict[int, dict[str, str]] = {}
+        saw_tools = False
+        for data in self._post_stream(self._payload(messages, tools, stream=True)):
+            try:
+                delta = data["choices"][0].get("delta") or {}
+            except (KeyError, IndexError, TypeError):
+                continue
+            content = delta.get("content")
+            if content and not saw_tools:
+                piece = str(content)
+                chunks.append(piece)
+                yield Token(piece)
+            for raw in delta.get("tool_calls") or []:
+                saw_tools = True
+                index = int(raw.get("index") or 0)
+                slot = calls.setdefault(index, {"id": "", "name": "", "arguments": ""})
+                if raw.get("id"):
+                    slot["id"] = str(raw["id"])
+                function = raw.get("function") or {}
+                if function.get("name"):
+                    slot["name"] = str(function["name"])
+                if function.get("arguments"):
+                    slot["arguments"] += str(function["arguments"])
+        if saw_tools:
+            assembled = []
+            for index in sorted(calls):
+                slot = calls[index]
+                try:
+                    args = json.loads(slot["arguments"] or "{}")
+                except json.JSONDecodeError:
+                    args = {}
+                if not isinstance(args, dict):
+                    args = {}
+                assembled.append(
+                    ToolCall(id=slot["id"], name=slot["name"], args=args)
+                )
+            yield ModelTurn(tool_calls=assembled)
+            return
+        yield ModelTurn(text="".join(chunks))
+
+    def _post_stream(self, payload: dict):
+        request = urllib.request.Request(
+            f"{self.base_url}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                for raw in response:
+                    line = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+                    line = line.strip()
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        return
+                    try:
+                        yield json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise LlmError(f"model HTTP {exc.code}: {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise LlmError(f"model request failed: {exc}") from exc
 
     def _post(self, payload: dict) -> dict:
         request = urllib.request.Request(

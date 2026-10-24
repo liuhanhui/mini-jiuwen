@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from mini_swarm.engine.compact import CompactPolicy, compact_messages
 from mini_swarm.engine.context import messages_for_complete
 from mini_swarm.engine.model import ModelTurn, ToolCall
 from mini_swarm.engine.session import Session
@@ -50,11 +51,13 @@ class ReactAgent:
         tools: ToolRegistry,
         session: Session,
         stop: StopPolicy | None = None,
+        compact: CompactPolicy | None = None,
     ) -> None:
         self.model = model
         self.tools = tools
         self.session = session
         self.stop = stop or StopPolicy()
+        self.compact = compact or CompactPolicy()
 
     def run(self, query: str) -> RunResult:
         self.session.add_user(query)
@@ -88,6 +91,7 @@ class ReactAgent:
         stopped_by = "max_steps"
 
         while not self.stop.should_stop(step=step, has_final_text=False):
+            self._maybe_compact(events)
             turn = self.model.complete(
                 messages_for_complete(self.tools.workspace, self.session.messages),
                 self.tools.schemas(),
@@ -109,6 +113,13 @@ class ReactAgent:
 
         self.session.save()
         return RunResult(final_text=final_text, events=events, stopped_by=stopped_by)
+
+    def _maybe_compact(self, events: list[Event]) -> None:
+        compacted, info = compact_messages(self.session.messages, self.compact)
+        if info is None:
+            return
+        self.session.messages = compacted
+        events.append(Event(kind="context.compact", payload=info))
 
     def _apply_tool_turn(self, calls: list[ToolCall], events: list[Event]) -> bool:
         recorded = [_call_to_dict(call) for call in calls]

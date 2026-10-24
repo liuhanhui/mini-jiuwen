@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M10 按需 Skills**（`skills/*/SKILL.md` 只注入目录；全文靠 `read_file`；循环仍只调 `Model.complete`）。
+当前进度：**M11 上下文压缩**（session 超长时 Harness 折叠旧消息；循环仍只调 `Model.complete`）。
 
 ## 安装
 
@@ -74,5 +74,7 @@ workspace/MEMORY.md   可改的笔记（模型可用 write_file 更新）
 同一轮里写入 `MEMORY.md` 后，下一步 `complete` 就能看到新内容。Leader、Teammate、`task` 子代理共用工作区，因此共用记忆。
 
 长流程不要写进 `AGENTS.md`。放到 `workspace/skills/<name>/SKILL.md`，Harness 只注入目录（名字、一行摘要、路径）。模型需要步骤时，用 `read_file` 读那份文件。
+
+同一 session 消息超过预算（默认 24 条）时，Harness 会把旧前缀收成一条 `[compacted]` 说明，留下最近几条。不另调模型；CLI 会出现 `[compact] dropped=… kept=…`。`AGENTS.md` / skill 目录每次仍现读现拼，不参与这条折叠。
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

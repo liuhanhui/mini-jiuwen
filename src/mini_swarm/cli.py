@@ -69,6 +69,11 @@ def _print_events(events) -> None:
     for event in events:
         if event.kind == "tool.call":
             print(f"[tool] {event.payload['name']} {event.payload.get('args')}")
+        elif event.kind == "context.compact":
+            print(
+                f"[compact] dropped={event.payload.get('dropped')} "
+                f"kept={event.payload.get('kept')}"
+            )
         elif event.kind == "text.delta":
             print(event.payload["text"])
 

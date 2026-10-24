@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from mini_swarm.engine.memory import messages_with_memory
+from mini_swarm.engine.context import messages_for_complete
 from mini_swarm.engine.model import ModelTurn, ToolCall
 from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
@@ -89,7 +89,7 @@ class ReactAgent:
 
         while not self.stop.should_stop(step=step, has_final_text=False):
             turn = self.model.complete(
-                messages_with_memory(self.tools.workspace, self.session.messages),
+                messages_for_complete(self.tools.workspace, self.session.messages),
                 self.tools.schemas(),
             )
             step += 1

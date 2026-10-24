@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M9 工作区记忆**（`AGENTS.md` / `MEMORY.md` 由 Harness 注入；循环仍只调 `Model.complete`）。
+当前进度：**M10 按需 Skills**（`skills/*/SKILL.md` 只注入目录；全文靠 `read_file`；循环仍只调 `Model.complete`）。
 
 ## 安装
 
@@ -72,5 +72,7 @@ workspace/MEMORY.md   可改的笔记（模型可用 write_file 更新）
 ```
 
 同一轮里写入 `MEMORY.md` 后，下一步 `complete` 就能看到新内容。Leader、Teammate、`task` 子代理共用工作区，因此共用记忆。
+
+长流程不要写进 `AGENTS.md`。放到 `workspace/skills/<name>/SKILL.md`，Harness 只注入目录（名字、一行摘要、路径）。模型需要步骤时，用 `read_file` 读那份文件。
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

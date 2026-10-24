@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
 
 from mini_swarm.doorbell.start import AGENTSERVER_PORT, start_processes
 from mini_swarm.engine.deep_agent import DeepAgent
+from mini_swarm.engine.llm import LlmError, OpenAICompatModel
 from mini_swarm.engine.model import ModelTurn, ScriptedModel, ToolCall
 from mini_swarm.engine.stop import StopPolicy
 from mini_swarm.engine.team import Team, make_team
@@ -36,11 +38,20 @@ def build_demo_model(workspace) -> ScriptedModel:
     )
 
 
+def has_api_key() -> bool:
+    return bool(os.environ.get("MINI_SWARM_API_KEY") or os.environ.get("OPENAI_API_KEY"))
+
+
+def resolve_runtime_model(workspace, *, demo: bool):
+    if demo:
+        return build_demo_model(workspace)
+    return OpenAICompatModel.from_env()
+
+
 def build_demo_agent(workspace, session_id: str, rail=None) -> Team:
-    model = build_demo_model(workspace)
     return make_team(
         workspace=workspace,
-        model=model,
+        model=resolve_runtime_model(workspace, demo=True),
         session_id=session_id,
         stop=StopPolicy(max_steps=8),
         rail_path=rail,
@@ -86,31 +97,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     _configure_stdio()
 
-    if not args.demo:
+    needs_model = args.role != "gateway"
+    if needs_model and not args.demo and not has_api_key():
         print(
-            "Pass --demo to use the scripted model "
-            "(or --serve --demo / --start --demo).",
+            "Pass --demo for the scripted model, or set MINI_SWARM_API_KEY "
+            "(OpenAI-compatible).",
             file=sys.stderr,
         )
         return 2
 
     workspace = resolve_workspace()
     if args.start:
-        return start_processes(demo=True, host=args.host, rail=args.rail)
-
-    if args.role == "agentserver":
-        from mini_swarm.doorbell.agentserver import create_agentserver_app
-
-        _serve(
-            create_agentserver_app(
-                workspace=workspace,
-                model=build_demo_model(workspace),
-                rail_path=args.rail,
-            ),
-            args.host,
-            args.port or AGENTSERVER_PORT,
-        )
-        return 0
+        return start_processes(demo=args.demo, host=args.host, rail=args.rail)
 
     if args.role == "gateway":
         from mini_swarm.doorbell.gateway import create_gateway_app
@@ -123,13 +121,33 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    try:
+        model = resolve_runtime_model(workspace, demo=args.demo)
+    except LlmError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    if args.role == "agentserver":
+        from mini_swarm.doorbell.agentserver import create_agentserver_app
+
+        _serve(
+            create_agentserver_app(
+                workspace=workspace,
+                model=model,
+                rail_path=args.rail,
+            ),
+            args.host,
+            args.port or AGENTSERVER_PORT,
+        )
+        return 0
+
     if args.serve:
         from mini_swarm.doorbell.http import create_app
 
         _serve(
             create_app(
                 workspace=workspace,
-                model=build_demo_model(workspace),
+                model=model,
                 rail_path=args.rail,
             ),
             args.host,
@@ -137,7 +155,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    agent = build_demo_agent(workspace, args.session, rail=args.rail)
+    agent = make_team(
+        workspace=workspace,
+        model=model,
+        session_id=args.session,
+        stop=StopPolicy(max_steps=8),
+        rail_path=args.rail,
+    )
     agent.send_input(args.query)
     _print_events(_drain(agent))
     return 0

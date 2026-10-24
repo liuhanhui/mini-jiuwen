@@ -17,9 +17,11 @@ def test_demo_cli_reads_readme_and_prints_answer(
     assert "first line" in captured.out
 
 
-def test_cli_without_demo_exits_with_help(capsys) -> None:
+def test_cli_without_demo_exits_with_help(capsys, monkeypatch) -> None:
+    monkeypatch.delenv("MINI_SWARM_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     code = main(["what is in README?"])
     captured = capsys.readouterr()
     assert code == 2
     assert "--demo" in captured.err
-    assert "--serve" in captured.err
+    assert "MINI_SWARM_API_KEY" in captured.err

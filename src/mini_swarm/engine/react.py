@@ -5,7 +5,7 @@ from typing import Any, Protocol
 
 from mini_swarm.engine.compact import CompactPolicy, compact_messages
 from mini_swarm.engine.context import messages_for_complete
-from mini_swarm.engine.model import ModelTurn, ToolCall
+from mini_swarm.engine.model import ModelTurn, Token, ToolCall
 from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
 from mini_swarm.engine.tools import ToolError, ToolRegistry
@@ -15,6 +15,7 @@ DENIED_OBSERVATION = "用户拒绝"
 
 class Model(Protocol):
     def complete(self, messages: list[dict], tools: list[dict]) -> ModelTurn: ...
+    def stream(self, messages: list[dict], tools: list[dict]): ...
 
 
 @dataclass
@@ -92,10 +93,7 @@ class ReactAgent:
 
         while not self.stop.should_stop(step=step, has_final_text=False):
             self._maybe_compact(events)
-            turn = self.model.complete(
-                messages_for_complete(self.tools.workspace, self.session.messages),
-                self.tools.schemas(),
-            )
+            turn, streamed = self._think(events)
             step += 1
 
             if turn.tool_calls:
@@ -106,13 +104,31 @@ class ReactAgent:
 
             final_text = turn.text or ""
             self.session.add_assistant(final_text)
-            events.append(Event(kind="text.delta", payload={"text": final_text}))
+            if not streamed:
+                events.append(Event(kind="text.delta", payload={"text": final_text}))
             events.append(Event(kind="turn.complete", payload={}))
             stopped_by = "final_text"
             break
 
         self.session.save()
         return RunResult(final_text=final_text, events=events, stopped_by=stopped_by)
+
+    def _think(self, events: list[Event]) -> tuple[ModelTurn, bool]:
+        messages = messages_for_complete(self.tools.workspace, self.session.messages)
+        tools = self.tools.schemas()
+        stream = getattr(self.model, "stream", None)
+        if stream is None:
+            return self.model.complete(messages, tools), False
+        turn: ModelTurn | None = None
+        streamed = False
+        for part in stream(messages, tools):
+            if isinstance(part, Token):
+                if part.text:
+                    events.append(Event(kind="text.delta", payload={"text": part.text}))
+                    streamed = True
+            elif isinstance(part, ModelTurn):
+                turn = part
+        return turn or ModelTurn(text=""), streamed
 
     def _maybe_compact(self, events: list[Event]) -> None:
         compacted, info = compact_messages(self.session.messages, self.compact)

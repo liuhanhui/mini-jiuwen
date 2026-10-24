@@ -16,6 +16,11 @@ class ModelTurn:
     tool_calls: list[ToolCall] | None = None
 
 
+@dataclass
+class Token:
+    text: str
+
+
 class ScriptedModel:
     """Deterministic stand-in for an LLM. Used by tests and ``mini-swarm --demo``."""
 
@@ -27,6 +32,12 @@ class ScriptedModel:
         if not self._turns:
             raise RuntimeError("scripted model has no remaining turns")
         return self._turns.pop(0)
+
+    def stream(self, messages: list[dict], tools: list[dict]):
+        turn = self.complete(messages, tools)
+        if turn.text and not turn.tool_calls:
+            yield Token(turn.text)
+        yield turn
 
     def remaining(self) -> int:
         return len(self._turns)

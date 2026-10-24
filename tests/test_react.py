@@ -70,6 +70,6 @@ def test_react_loop_lives_only_in_react_module() -> None:
         if path.name == "react.py":
             continue
         text = path.read_text(encoding="utf-8")
-        if "model.complete" in text or "model.chat" in text:
+        if "model.complete" in text or "model.chat" in text or "model.stream" in text:
             offenders.append(str(path.relative_to(root)))
     assert offenders == []

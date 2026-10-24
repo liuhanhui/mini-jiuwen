@@ -9,7 +9,7 @@ from mini_swarm.engine.deep_agent import DeepAgent
 from mini_swarm.engine.model import ModelTurn, ScriptedModel, ToolCall
 from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
-from mini_swarm.engine.tools import make_default_tools
+from mini_swarm.rail import make_rail_tools
 from mini_swarm.workspace import resolve_workspace
 
 
@@ -37,10 +37,10 @@ def build_demo_model(workspace) -> ScriptedModel:
     )
 
 
-def build_demo_agent(workspace, session_id: str) -> DeepAgent:
+def build_demo_agent(workspace, session_id: str, rail=None) -> DeepAgent:
     return DeepAgent(
         model=build_demo_model(workspace),
-        tools=make_default_tools(workspace),
+        tools=make_rail_tools(workspace, rail),
         session=Session(session_id=session_id, store_dir=workspace / "sessions"),
         stop=StopPolicy(max_steps=8),
     )
@@ -81,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         default=f"ws://127.0.0.1:{AGENTSERVER_PORT}/e2a",
     )
     parser.add_argument("--session", default="default")
+    parser.add_argument("--rail", default=None, help="Path to rail.yaml (M5)")
     args = parser.parse_args(argv)
     _configure_stdio()
 
@@ -94,13 +95,17 @@ def main(argv: list[str] | None = None) -> int:
 
     workspace = resolve_workspace()
     if args.start:
-        return start_processes(demo=True, host=args.host)
+        return start_processes(demo=True, host=args.host, rail=args.rail)
 
     if args.role == "agentserver":
         from mini_swarm.doorbell.agentserver import create_agentserver_app
 
         _serve(
-            create_agentserver_app(workspace=workspace, model=build_demo_model(workspace)),
+            create_agentserver_app(
+                workspace=workspace,
+                model=build_demo_model(workspace),
+                rail_path=args.rail,
+            ),
             args.host,
             args.port or AGENTSERVER_PORT,
         )
@@ -121,13 +126,17 @@ def main(argv: list[str] | None = None) -> int:
         from mini_swarm.doorbell.http import create_app
 
         _serve(
-            create_app(workspace=workspace, model=build_demo_model(workspace)),
+            create_app(
+                workspace=workspace,
+                model=build_demo_model(workspace),
+                rail_path=args.rail,
+            ),
             args.host,
             args.port or 8765,
         )
         return 0
 
-    agent = build_demo_agent(workspace, args.session)
+    agent = build_demo_agent(workspace, args.session, rail=args.rail)
     agent.send_input(args.query)
     _print_events(_drain(agent))
     return 0

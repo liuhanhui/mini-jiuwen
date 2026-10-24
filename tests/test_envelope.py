@@ -22,6 +22,19 @@ def test_roundtrip_chat_send() -> None:
     assert env.request_id == "r1"
     assert env.method == "chat.send"
     assert env.query == "hello"
+    assert env.decision is None
+
+
+def test_roundtrip_permission_decision() -> None:
+    raw = encode_request(
+        session_id="s1",
+        request_id="r2",
+        query="",
+        decision="deny",
+    )
+    env = decode_request(raw)
+    assert env.method == "chat.send"
+    assert env.decision == "deny"
 
 
 def test_rejects_methods_other_than_chat_send() -> None:

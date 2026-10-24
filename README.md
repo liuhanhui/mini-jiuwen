@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M3 两进程 + 信封**（Gateway 对浏览器，AgentServer 对循环）。
+当前进度：**M5 声明式 Rail**（`rail.yaml` 增删工具，不改 `react.py` 循环）。
 
 ## 安装
 
@@ -38,6 +38,16 @@ M3 两进程（先 AgentServer:18765，再 Gateway:8764）：
 mini-swarm --start --demo
 ```
 
-浏览器打开 http://127.0.0.1:18765 。Gateway 把输入打成 `chat.send` 信封；AgentServer 日志会出现 `dispatched to runner`。杀掉 AgentServer 后，页面会收到明确的 `AgentServer unavailable`，而不是空转。
+浏览器打开 http://127.0.0.1:8764 。Gateway 把输入打成 `chat.send` 信封；AgentServer 日志会出现 `dispatched to runner`。杀掉 AgentServer 后，页面会收到明确的 `AgentServer unavailable`，而不是空转。
 
-工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。
+`bash` 会先弹出 **允许 / 拒绝**。不点允许，命令不会执行。
+
+从 `rail.yaml` 增删工具（不必改循环）：
+
+```bash
+mini-swarm --demo --rail rail.yaml
+```
+
+把 `bash` 那一行删掉后，Agent 不再暴露该工具。未指定 `--rail` 时，若工作区有 `rail.yaml` 则用它，否则三个内置工具全开。
+
+工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

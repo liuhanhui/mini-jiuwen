@@ -50,11 +50,13 @@ def create_gateway_app(
                 data = await ws.receive_json()
             except WebSocketDisconnect:
                 break
+            raw_decision = (data or {}).get("decision")
             envelope = Envelope(
                 session_id=str((data or {}).get("session_id") or "default"),
                 request_id=str(uuid.uuid4()),
                 method=CHAT_SEND,
                 query=str((data or {}).get("query") or ""),
+                decision=str(raw_decision) if raw_decision else None,
             )
             logger.info(
                 "chat.send session_id=%s request_id=%s",

@@ -17,6 +17,7 @@ class Envelope:
     request_id: str
     method: str
     query: str
+    decision: str | None = None
 
 
 def encode_request(
@@ -25,15 +26,17 @@ def encode_request(
     request_id: str,
     query: str,
     method: str = CHAT_SEND,
+    decision: str | None = None,
 ) -> str:
-    return json.dumps(
-        {
-            "session_id": session_id,
-            "request_id": request_id,
-            "method": method,
-            "query": query,
-        }
-    )
+    payload: dict[str, Any] = {
+        "session_id": session_id,
+        "request_id": request_id,
+        "method": method,
+        "query": query,
+    }
+    if decision:
+        payload["decision"] = decision
+    return json.dumps(payload)
 
 
 def decode_request(raw: str) -> Envelope:
@@ -41,11 +44,13 @@ def decode_request(raw: str) -> Envelope:
     method = str(data.get("method") or "")
     if method != CHAT_SEND:
         raise EnvelopeError(f"method must be {CHAT_SEND}")
+    raw_decision = data.get("decision")
     return Envelope(
         session_id=str(data.get("session_id") or ""),
         request_id=str(data.get("request_id") or ""),
         method=method,
         query=str(data.get("query") or ""),
+        decision=str(raw_decision) if raw_decision else None,
     )
 
 

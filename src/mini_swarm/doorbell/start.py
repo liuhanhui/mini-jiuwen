@@ -25,6 +25,7 @@ def build_start_commands(
     *,
     demo: bool,
     host: str = "127.0.0.1",
+    rail: str | None = None,
 ) -> list[list[str]]:
     prefix = [sys.executable, "-m", "mini_swarm.cli"]
     if demo:
@@ -37,6 +38,8 @@ def build_start_commands(
         "--port",
         str(AGENTSERVER_PORT),
     ]
+    if rail:
+        agentserver += ["--rail", rail]
     gateway = prefix + [
         "--role",
         "gateway",
@@ -50,8 +53,8 @@ def build_start_commands(
     return [agentserver, gateway]
 
 
-def start_processes(*, demo: bool, host: str = "127.0.0.1") -> int:
-    commands = build_start_commands(demo=demo, host=host)
+def start_processes(*, demo: bool, host: str = "127.0.0.1", rail: str | None = None) -> int:
+    commands = build_start_commands(demo=demo, host=host, rail=rail)
     env = child_env()
     procs = [subprocess.Popen(cmd, env=env) for cmd in commands]
     try:

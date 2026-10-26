@@ -7,6 +7,7 @@ import sys
 
 from mini_swarm.doorbell.start import AGENTSERVER_PORT, start_processes
 from mini_swarm.engine.deep_agent import DeepAgent
+from mini_swarm.engine.react import Event
 from mini_swarm.engine.llm import LlmError, OpenAICompatModel
 from mini_swarm.engine.model import ModelTurn, ScriptedModel, ToolCall
 from mini_swarm.engine.stop import StopPolicy
@@ -59,15 +60,17 @@ def build_demo_agent(workspace, session_id: str, rail=None) -> Team:
 
 
 def _print_event(event) -> None:
-    if event.kind == "tool.call":
+    if event.kind == Event.TOOL_CALL:
         print(f"[tool] {event.payload['name']} {event.payload.get('args')}")
-    elif event.kind == "context.compact":
+    elif event.kind == Event.CONTEXT_COMPACT:
         print(
             f"[compact] dropped={event.payload.get('dropped')} "
             f"kept={event.payload.get('kept')}"
         )
-    elif event.kind == "text.delta":
+    elif event.kind == Event.TEXT_DELTA:
         print(event.payload["text"], flush=True)
+    elif event.kind == Event.ERROR:
+        print(f"错误: {event.payload.get('message')}", flush=True)
 
 
 def _drain(agent: DeepAgent):

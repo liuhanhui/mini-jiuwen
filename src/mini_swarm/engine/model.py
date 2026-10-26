@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
+class ModelError(Exception):
+    pass
+
+
 @dataclass
 class ToolCall:
     id: str

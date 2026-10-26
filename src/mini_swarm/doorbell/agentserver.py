@@ -13,6 +13,7 @@ from mini_swarm.doorbell.envelope import (
     encode_error,
     peek_request_id,
 )
+from mini_swarm.engine.react import Event
 from mini_swarm.engine.stop import StopPolicy
 from mini_swarm.engine.team import make_team
 
@@ -61,7 +62,7 @@ def create_agentserver_app(
             else:
                 team.send_input(envelope.query)
             async for event in team.attach_output():
-                if event.kind == "turn.complete":
+                if event.kind == Event.TURN_COMPLETE:
                     continue
                 await ws.send_text(
                     encode_chunk(

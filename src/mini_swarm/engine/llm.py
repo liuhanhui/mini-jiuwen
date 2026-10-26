@@ -5,10 +5,10 @@ import os
 import urllib.error
 import urllib.request
 
-from mini_swarm.engine.model import ModelTurn, Token, ToolCall
+from mini_swarm.engine.model import ModelError, ModelTurn, Token, ToolCall
 
 
-class LlmError(Exception):
+class LlmError(ModelError):
     pass
 
 

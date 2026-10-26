@@ -59,45 +59,69 @@ class ReactAgent:
         self.session = session
         self.stop = stop or StopPolicy()
         self.compact = compact or CompactPolicy()
+        self._final_text: str | None = None
+        self._stopped_by = "max_steps"
 
     def run(self, query: str) -> RunResult:
-        self.session.add_user(query)
-        return self._loop([])
+        events = list(self.iter_run(query))
+        return RunResult(self._final_text, events, self._stopped_by)
 
     def resume(self, allow: bool) -> RunResult:
+        events = list(self.iter_resume(allow))
+        return RunResult(self._final_text, events, self._stopped_by)
+
+    def iter_run(self, query: str):
+        self.session.add_user(query)
+        yield from self._iter_loop([])
+
+    def iter_resume(self, allow: bool):
         events: list[Event] = []
         remaining = [_call_from_dict(raw) for raw in (self.session.pending_calls or [])]
         if not remaining:
             self.session.save()
-            return RunResult(final_text=None, events=events, stopped_by="permission")
+            self._final_text = None
+            self._stopped_by = "permission"
+            return
         call = remaining.pop(0)
         if allow:
+            mark = len(events)
             self._observe_call(call, events)
+            yield from events[mark:]
         else:
             self.session.add_tool(call.id, DENIED_OBSERVATION)
-            events.append(
-                Event(
-                    kind="tool.result",
-                    payload={"name": call.name, "output": DENIED_OBSERVATION},
-                )
+            event = Event(
+                kind="tool.result",
+                payload={"name": call.name, "output": DENIED_OBSERVATION},
             )
+            events.append(event)
+            yield event
+        mark = len(events)
         if self._drain_calls(remaining, events):
+            yield from events[mark:]
             self.session.save()
-            return RunResult(final_text=None, events=events, stopped_by="permission")
-        return self._loop(events)
+            self._final_text = None
+            self._stopped_by = "permission"
+            return
+        yield from events[mark:]
+        yield from self._iter_loop(events)
 
-    def _loop(self, events: list[Event]) -> RunResult:
+    def _iter_loop(self, events: list[Event]):
         step = 0
         final_text: str | None = None
         stopped_by = "max_steps"
 
         while not self.stop.should_stop(step=step, has_final_text=False):
+            mark = len(events)
             self._maybe_compact(events)
-            turn, streamed = self._think(events)
+            yield from events[mark:]
+            turn, streamed = yield from self._iter_think(events)
             step += 1
 
             if turn.tool_calls:
-                if self._apply_tool_turn(turn.tool_calls, events):
+                mark = len(events)
+                paused = self._apply_tool_turn(turn.tool_calls, events)
+                yield from events[mark:]
+                if paused:
                     stopped_by = "permission"
                     break
                 continue
@@ -105,15 +129,20 @@ class ReactAgent:
             final_text = turn.text or ""
             self.session.add_assistant(final_text)
             if not streamed:
-                events.append(Event(kind="text.delta", payload={"text": final_text}))
-            events.append(Event(kind="turn.complete", payload={}))
+                event = Event(kind="text.delta", payload={"text": final_text})
+                events.append(event)
+                yield event
+            event = Event(kind="turn.complete", payload={})
+            events.append(event)
+            yield event
             stopped_by = "final_text"
             break
 
         self.session.save()
-        return RunResult(final_text=final_text, events=events, stopped_by=stopped_by)
+        self._final_text = final_text
+        self._stopped_by = stopped_by
 
-    def _think(self, events: list[Event]) -> tuple[ModelTurn, bool]:
+    def _iter_think(self, events: list[Event]):
         messages = messages_for_complete(self.tools.workspace, self.session.messages)
         tools = self.tools.schemas()
         stream = getattr(self.model, "stream", None)
@@ -124,8 +153,10 @@ class ReactAgent:
         for part in stream(messages, tools):
             if isinstance(part, Token):
                 if part.text:
-                    events.append(Event(kind="text.delta", payload={"text": part.text}))
+                    event = Event(kind="text.delta", payload={"text": part.text})
+                    events.append(event)
                     streamed = True
+                    yield event
             elif isinstance(part, ModelTurn):
                 turn = part
         return turn or ModelTurn(text=""), streamed

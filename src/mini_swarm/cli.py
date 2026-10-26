@@ -58,24 +58,27 @@ def build_demo_agent(workspace, session_id: str, rail=None) -> Team:
     )
 
 
+def _print_event(event) -> None:
+    if event.kind == "tool.call":
+        print(f"[tool] {event.payload['name']} {event.payload.get('args')}")
+    elif event.kind == "context.compact":
+        print(
+            f"[compact] dropped={event.payload.get('dropped')} "
+            f"kept={event.payload.get('kept')}"
+        )
+    elif event.kind == "text.delta":
+        print(event.payload["text"], flush=True)
+
+
 def _drain(agent: DeepAgent):
     async def _run():
-        return [event async for event in agent.attach_output()]
+        events = []
+        async for event in agent.attach_output():
+            _print_event(event)
+            events.append(event)
+        return events
 
     return asyncio.run(_run())
-
-
-def _print_events(events) -> None:
-    for event in events:
-        if event.kind == "tool.call":
-            print(f"[tool] {event.payload['name']} {event.payload.get('args')}")
-        elif event.kind == "context.compact":
-            print(
-                f"[compact] dropped={event.payload.get('dropped')} "
-                f"kept={event.payload.get('kept')}"
-            )
-        elif event.kind == "text.delta":
-            print(event.payload["text"])
 
 
 def _serve(app, host: str, port: int) -> None:
@@ -168,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
         rail_path=args.rail,
     )
     agent.send_input(args.query)
-    _print_events(_drain(agent))
+    _drain(agent)
     return 0
 
 

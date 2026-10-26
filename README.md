@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M12 流式 Think**（`Model.stream` 产出分片 `text.delta`；循环仍只在 `react.py`）。
+当前进度：**M13 门铃直播**（`attach_output` 边想边转发 `text.delta`；循环仍只在 `react.py`）。
 
 ## 安装
 
@@ -77,6 +77,6 @@ workspace/MEMORY.md   可改的笔记（模型可用 write_file 更新）
 
 同一 session 消息超过预算（默认 24 条）时，Harness 会把旧前缀收成一条 `[compacted]` 说明，留下最近几条。不另调模型；CLI 会出现 `[compact] dropped=… kept=…`。`AGENTS.md` / skill 目录每次仍现读现拼，不参与这条折叠。
 
-真实模型走 `stream`：正文按片变成多条 `text.delta`，工具调用仍等拼完整再 `tool.call`。循环还是只在 `react.py` 里拉模型；门铃只转发已经拆好的事件。
+真实模型走 `stream`：正文按片变成多条 `text.delta`，工具调用仍等拼完整再 `tool.call`。循环还是只在 `react.py` 里拉模型。`attach_output` 边想边转发，CLI / HTTP NDJSON 不必等整轮 `run` 结束。
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

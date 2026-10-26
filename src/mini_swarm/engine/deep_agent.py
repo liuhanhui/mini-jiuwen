@@ -45,12 +45,12 @@ class DeepAgent:
                 raise DeepAgentError("no pending permission")
             allow = self._pending_decision == "allow"
             self._pending_decision = None
-            result = self._react.resume(allow=allow)
+            iterator = self._react.iter_resume(allow=allow)
         else:
             if self._pending_query is None:
                 raise DeepAgentError("send_input before attach_output")
             query = self._pending_query
             self._pending_query = None
-            result = self._react.run(query)
-        for event in result.events:
+            iterator = self._react.iter_run(query)
+        for event in iterator:
             yield event

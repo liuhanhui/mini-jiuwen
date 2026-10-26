@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 from mini_swarm.engine.compact import CompactPolicy, compact_messages
 from mini_swarm.engine.context import messages_for_complete
-from mini_swarm.engine.model import ModelTurn, Token, ToolCall
+from mini_swarm.engine.model import ModelError, ModelTurn, Token, ToolCall
 from mini_swarm.engine.session import Session
 from mini_swarm.engine.stop import StopPolicy
 from mini_swarm.engine.tools import ToolError, ToolRegistry
@@ -20,6 +20,14 @@ class Model(Protocol):
 
 @dataclass
 class Event:
+    TEXT_DELTA: ClassVar[str] = "text.delta"
+    TOOL_CALL: ClassVar[str] = "tool.call"
+    TOOL_RESULT: ClassVar[str] = "tool.result"
+    PERMISSION_ASK: ClassVar[str] = "permission.ask"
+    CONTEXT_COMPACT: ClassVar[str] = "context.compact"
+    TURN_COMPLETE: ClassVar[str] = "turn.complete"
+    ERROR: ClassVar[str] = "error"
+
     kind: str
     payload: dict[str, Any] = field(default_factory=dict)
 
@@ -90,7 +98,7 @@ class ReactAgent:
         else:
             self.session.add_tool(call.id, DENIED_OBSERVATION)
             event = Event(
-                kind="tool.result",
+                kind=Event.TOOL_RESULT,
                 payload={"name": call.name, "output": DENIED_OBSERVATION},
             )
             events.append(event)
@@ -117,6 +125,10 @@ class ReactAgent:
             turn, streamed = yield from self._iter_think(events)
             step += 1
 
+            if turn is None:
+                stopped_by = "error"
+                break
+
             if turn.tool_calls:
                 mark = len(events)
                 paused = self._apply_tool_turn(turn.tool_calls, events)
@@ -129,10 +141,10 @@ class ReactAgent:
             final_text = turn.text or ""
             self.session.add_assistant(final_text)
             if not streamed:
-                event = Event(kind="text.delta", payload={"text": final_text})
+                event = Event(kind=Event.TEXT_DELTA, payload={"text": final_text})
                 events.append(event)
                 yield event
-            event = Event(kind="turn.complete", payload={})
+            event = Event(kind=Event.TURN_COMPLETE, payload={})
             events.append(event)
             yield event
             stopped_by = "final_text"
@@ -146,33 +158,39 @@ class ReactAgent:
         messages = messages_for_complete(self.tools.workspace, self.session.messages)
         tools = self.tools.schemas()
         stream = getattr(self.model, "stream", None)
-        if stream is None:
-            return self.model.complete(messages, tools), False
-        turn: ModelTurn | None = None
-        streamed = False
-        for part in stream(messages, tools):
-            if isinstance(part, Token):
-                if part.text:
-                    event = Event(kind="text.delta", payload={"text": part.text})
-                    events.append(event)
-                    streamed = True
-                    yield event
-            elif isinstance(part, ModelTurn):
-                turn = part
-        return turn or ModelTurn(text=""), streamed
+        try:
+            if stream is None:
+                return self.model.complete(messages, tools), False
+            turn: ModelTurn | None = None
+            streamed = False
+            for part in stream(messages, tools):
+                if isinstance(part, Token):
+                    if part.text:
+                        event = Event(kind=Event.TEXT_DELTA, payload={"text": part.text})
+                        events.append(event)
+                        streamed = True
+                        yield event
+                elif isinstance(part, ModelTurn):
+                    turn = part
+            return turn or ModelTurn(text=""), streamed
+        except ModelError as exc:
+            event = Event(kind=Event.ERROR, payload={"message": str(exc)})
+            events.append(event)
+            yield event
+            return None, True
 
     def _maybe_compact(self, events: list[Event]) -> None:
         compacted, info = compact_messages(self.session.messages, self.compact)
         if info is None:
             return
         self.session.messages = compacted
-        events.append(Event(kind="context.compact", payload=info))
+        events.append(Event(kind=Event.CONTEXT_COMPACT, payload=info))
 
     def _apply_tool_turn(self, calls: list[ToolCall], events: list[Event]) -> bool:
         recorded = [_call_to_dict(call) for call in calls]
         for call in calls:
             events.append(
-                Event(kind="tool.call", payload={"name": call.name, "args": call.args})
+                Event(kind=Event.TOOL_CALL, payload={"name": call.name, "args": call.args})
             )
         self.session.add_assistant("", tool_calls=recorded)
         return self._drain_calls(list(calls), events)
@@ -184,7 +202,7 @@ class ReactAgent:
                 self.session.pending_calls = [_call_to_dict(item) for item in remaining]
                 events.append(
                     Event(
-                        kind="permission.ask",
+                        kind=Event.PERMISSION_ASK,
                         payload={
                             "name": call.name,
                             "args": call.args,
@@ -206,5 +224,5 @@ class ReactAgent:
             output = f"tool error: {exc}"
         self.session.add_tool(call.id, output)
         events.append(
-            Event(kind="tool.result", payload={"name": call.name, "output": output})
+            Event(kind=Event.TOOL_RESULT, payload={"name": call.name, "output": output})
         )

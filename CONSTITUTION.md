@@ -30,6 +30,7 @@
 | M12 流式 Think | 完成 | `Model.stream` 产出分片 `text.delta`；循环仍只在 `react.py` |
 | M13 门铃直播 | 完成 | `attach_output` 边想边转发 `text.delta`；循环仍只在 `react.py` |
 | M14 失败即事件 | 完成 | 模型失败变成 `error` 事件；`kind` 字面量收在 `Event` 上 |
+| M15 可取消 | 完成 | `decision=cancel` 在下一片 Token 前停循环；门铃不调模型 |
 
 ## 禁止
 

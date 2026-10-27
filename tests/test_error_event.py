@@ -47,6 +47,7 @@ def test_event_kinds_are_declared_on_event() -> None:
     assert Event.TEXT_DELTA == "text.delta"
     assert Event.ERROR == "error"
     assert Event.TURN_COMPLETE == "turn.complete"
+    assert Event.CANCELLED == "run.cancelled"
 
 
 def test_chat_page_uses_the_same_kind_strings() -> None:

@@ -27,6 +27,7 @@ class Event:
     CONTEXT_COMPACT: ClassVar[str] = "context.compact"
     TURN_COMPLETE: ClassVar[str] = "turn.complete"
     ERROR: ClassVar[str] = "error"
+    CANCELLED: ClassVar[str] = "run.cancelled"
 
     kind: str
     payload: dict[str, Any] = field(default_factory=dict)
@@ -69,6 +70,10 @@ class ReactAgent:
         self.compact = compact or CompactPolicy()
         self._final_text: str | None = None
         self._stopped_by = "max_steps"
+        self._cancelled = False
+
+    def cancel(self) -> None:
+        self._cancelled = True
 
     def run(self, query: str) -> RunResult:
         events = list(self.iter_run(query))
@@ -79,6 +84,7 @@ class ReactAgent:
         return RunResult(self._final_text, events, self._stopped_by)
 
     def iter_run(self, query: str):
+        self._cancelled = False
         self.session.add_user(query)
         yield from self._iter_loop([])
 
@@ -126,7 +132,7 @@ class ReactAgent:
             step += 1
 
             if turn is None:
-                stopped_by = "error"
+                stopped_by = "cancelled" if self._cancelled else "error"
                 break
 
             if turn.tool_calls:
@@ -164,6 +170,11 @@ class ReactAgent:
             turn: ModelTurn | None = None
             streamed = False
             for part in stream(messages, tools):
+                if self._cancelled:
+                    event = Event(kind=Event.CANCELLED, payload={})
+                    events.append(event)
+                    yield event
+                    return None, True
                 if isinstance(part, Token):
                     if part.text:
                         event = Event(kind=Event.TEXT_DELTA, payload={"text": part.text})

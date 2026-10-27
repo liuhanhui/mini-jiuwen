@@ -2,7 +2,7 @@
 
 从零做的教学用迷你 Swarm：循环在 `engine/`，门铃在 `doorbell/`。
 
-当前进度：**M14 失败即事件**（模型失败变成 `error`；`kind` 收在 `Event` 上；循环仍只在 `react.py`）。
+当前进度：**M15 可取消**（`decision=cancel` 在下一片 Token 前停循环；门铃不调模型）。
 
 ## 安装
 
@@ -80,5 +80,7 @@ workspace/MEMORY.md   可改的笔记（模型可用 write_file 更新）
 真实模型走 `stream`：正文按片变成多条 `text.delta`，工具调用仍等拼完整再 `tool.call`。循环还是只在 `react.py` 里拉模型。`attach_output` 边想边转发，CLI / HTTP NDJSON 不必等整轮 `run` 结束。
 
 模型失败（缺 key、HTTP 401 等）变成 `error` 事件，不把异常扔给门铃。事件名写在 `Event.TEXT_DELTA` 这类常量上，CLI / 网页认同一套字符串。
+
+直播中途可以 `send_input(decision="cancel")`。循环在下一片 Token 前停，发出 `run.cancelled`，不再继续 Think。这是门铃特例，和允许/拒绝一样不进 Rail。
 
 工作区默认：`MINI_SWARM_WORKSPACE`，否则 `./workspace`；写不进去时落到 `~/.mini-swarm/tasks`。工具只能碰该目录。

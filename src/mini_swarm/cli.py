@@ -71,6 +71,8 @@ def _print_event(event) -> None:
         print(event.payload["text"], flush=True)
     elif event.kind == Event.ERROR:
         print(f"错误: {event.payload.get('message')}", flush=True)
+    elif event.kind == Event.CANCELLED:
+        print("[cancelled]", flush=True)
 
 
 def _drain(agent: DeepAgent):

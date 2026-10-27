@@ -29,8 +29,12 @@ class DeepAgent:
 
     def send_input(self, query: str | None = None, *, decision: str | None = None) -> None:
         if decision is not None:
+            if decision == "cancel":
+                self._react.cancel()
+                self._pending_query = None
+                return
             if decision not in {"allow", "deny"}:
-                raise DeepAgentError("decision must be allow or deny")
+                raise DeepAgentError("decision must be allow or deny or cancel")
             self._pending_decision = decision
             self._pending_query = None
             return
